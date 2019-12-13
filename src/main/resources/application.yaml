@@ -1,0 +1,36 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:job_repository_db
+    username: sa
+    password: sa
+  batch:
+    initialize-schema: always
+    job:
+      names: convertPostsJob
+  freemarker:
+    enabled: true
+
+app:
+  sources:
+    regular:
+      wordpress-home: /Users/nantipov/Downloads/backup-2.6.2019_16-51-23_orangelv/homedir/public_html
+      wordpress-remote-base-url: http://orangelvira.com/
+      database:
+        url: jdbc:mysql://localhost:3306/orangelv_wp1
+        username: root
+        password: mysql
+      tags:
+        - regular
+    shop:
+      wordpress-home: /Users/nantipov/Downloads/backup-2.6.2019_16-51-23_orangelv/homedir/shop/public_html
+      wordpress-remote-base-url: http://shop.orangelvira.com/
+      database:
+        url: jdbc:mysql://localhost:3306/orangelv_wp2_shop
+        username: root
+        password: mysql
+      tags:
+        - extra
+  target:
+    hugo-site-content-items-dir: output/blog/content/posts
+
+

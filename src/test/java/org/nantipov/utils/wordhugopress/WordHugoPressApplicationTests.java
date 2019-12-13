@@ -1,4 +1,4 @@
-package org.nantipov.utils.wordpresstohugo;
+package org.nantipov.utils.wordhugopress;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -7,7 +7,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
-public class WordpresstohugoApplicationTests {
+public class WordHugoPressApplicationTests {
 
 	@Test
 	public void contextLoads() {
