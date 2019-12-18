@@ -1,5 +1,5 @@
 <#function taxname tax>
-    <#if tax == "category"><#return "categories"/><#elseif tax = "post_tag"><#return "tags"/><#else><#return tax/></#if>
+    <#if tax == "category"><#return "categories"/><#elseif tax == "post_tag"><#return "tags"/><#else><#return tax/></#if>
 </#function>
 ---
 title: '${post.title}'

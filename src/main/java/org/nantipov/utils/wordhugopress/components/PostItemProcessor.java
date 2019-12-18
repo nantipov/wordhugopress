@@ -4,6 +4,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import lombok.extern.slf4j.Slf4j;
 import net.gcardone.junidecode.Junidecode;
 import org.jsoup.Jsoup;
@@ -57,7 +58,25 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
         post.setResourceTransferRequests(new ArrayList<>());
         addCoverFile(post);
         processContent(post);
+        addExtraTaxonomy(post);
         return post;
+    }
+
+    private void addExtraTaxonomy(Post post) {
+        SourcesSettings.Source source = sourcesSettings.getSources().get(post.getSourceName());
+        if (source != null) {
+            ImmutableMultimap.Builder<String, String> mapBuilder = ImmutableMultimap.builder();
+            if (post.getTaxonomy() != null) {
+                mapBuilder.putAll(post.getTaxonomy());
+            }
+            if (source.getTags() != null && !source.getTags().isEmpty()) {
+                mapBuilder.putAll("post_tag", source.getTags());
+            }
+            if (source.getCategories() != null && !source.getCategories().isEmpty()) {
+                mapBuilder.putAll("category", source.getCategories());
+            }
+            post.setTaxonomy(mapBuilder.build());
+        }
     }
 
     private void processContent(Post post) {
