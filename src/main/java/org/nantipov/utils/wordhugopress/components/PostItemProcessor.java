@@ -95,20 +95,24 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
                 contentBuilder.append("\n");
                 break;
             case "a":
+                String href = nullToEmpty(element.attr("href"));
+                String text = element.text();
+                Reference referenceAnchor = adjustReference(new Reference(href, text, null));
+                if (referenceAnchor.getResourceTransferRequest() != null) {
+                    post.getResourceTransferRequests().add(referenceAnchor.getResourceTransferRequest());
+                }
                 Element firstInnerElement = element.children().first();
                 if (firstInnerElement != null && firstInnerElement.tagName().toLowerCase().equals("img")) {
+                    contentBuilder.append('[');
                     processContentHtmlElement(firstInnerElement, contentBuilder, post);
+                    contentBuilder.append(']');
+                    contentBuilder.append(String.format("(%s)", referenceAnchor.getResourceLocation()));
                 } else {
-                    String href = nullToEmpty(element.attr("href"));
-                    String text = element.text();
-                    Reference reference = adjustReference(new Reference(href, text, null));
-                    if (reference.getResourceTransferRequest() != null) {
-                        post.getResourceTransferRequests().add(reference.getResourceTransferRequest());
-                    }
                     contentBuilder.append(
                             String.format("[%s](%s)",
-                                          Objects.toString(reference.getText(), reference.getResourceLocation()),
-                                          reference.getResourceLocation()
+                                          Objects.toString(referenceAnchor.getText(),
+                                                           referenceAnchor.getResourceLocation()),
+                                          referenceAnchor.getResourceLocation()
                             )
                     );
                 }
@@ -116,14 +120,14 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
             case "img":
                 String src = element.attr("src");
                 String alt = element.attr("alt");
-                Reference reference = adjustReference(new Reference(src, alt, null));
-                if (reference.getResourceTransferRequest() != null) {
-                    post.getResourceTransferRequests().add(reference.getResourceTransferRequest());
+                Reference referenceImg = adjustReference(new Reference(src, alt, null));
+                if (referenceImg.getResourceTransferRequest() != null) {
+                    post.getResourceTransferRequests().add(referenceImg.getResourceTransferRequest());
                 }
                 contentBuilder.append(
                         String.format("![%s](%s)",
-                                      nullToEmpty(reference.getText()),
-                                      reference.getResourceLocation()
+                                      nullToEmpty(referenceImg.getText()),
+                                      referenceImg.getResourceLocation()
                         )
                 );
                 break;
