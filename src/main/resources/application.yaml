@@ -24,6 +24,7 @@ app:
     shop:
       wordpress-home: /Users/nantipov/Downloads/backup-2.6.2019_16-51-23_orangelv/homedir/shop/public_html
       wordpress-remote-base-url: http://shop.orangelvira.com/
+      target-resource-suffix: "-s"
       database:
         url: jdbc:mysql://localhost:3306/orangelv_wp2_shop
         username: root

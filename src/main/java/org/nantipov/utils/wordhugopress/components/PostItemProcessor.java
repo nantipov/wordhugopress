@@ -2,6 +2,8 @@ package org.nantipov.utils.wordhugopress.components;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Charsets;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
 import net.gcardone.junidecode.Junidecode;
 import org.jsoup.Jsoup;
@@ -11,7 +13,9 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.nantipov.utils.wordhugopress.config.SourcesSettings;
 import org.nantipov.utils.wordhugopress.domain.Post;
+import org.nantipov.utils.wordhugopress.domain.Reference;
 import org.nantipov.utils.wordhugopress.domain.ResourceTransferRequest;
+import org.nantipov.utils.wordhugopress.tools.Utils;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
@@ -22,10 +26,13 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Strings.nullToEmpty;
@@ -43,8 +50,10 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
     }
 
     @Override
-    public Post process(Post post) throws Exception {
-        post.setPostDirectoryName(getPostDirectoryName(post.getTitle()));
+    public Post process(Post post) {
+        post.setPostDirectoryName(
+                getPostDirectoryName(post.getTitle(), sourcesSettings.getSources().get(post.getSourceName()))
+        );
         post.setResourceTransferRequests(new ArrayList<>());
         addCoverFile(post);
         processContent(post);
@@ -86,42 +95,37 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
                 contentBuilder.append("\n");
                 break;
             case "a":
-                Element firstElement = element.children().first();
-                if (firstElement != null && firstElement.tagName().toLowerCase().equals("img")) {
-                    processContentHtmlElement(firstElement, contentBuilder, post);
+                Element firstInnerElement = element.children().first();
+                if (firstInnerElement != null && firstInnerElement.tagName().toLowerCase().equals("img")) {
+                    processContentHtmlElement(firstInnerElement, contentBuilder, post);
                 } else {
-                    String href = nullToEmpty(element.attr("href"));  //TODO: internal or external
+                    String href = nullToEmpty(element.attr("href"));
                     String text = element.text();
-                    String link = href;
-                    SourcesSettings.Source source = sourcesSettings.getSources().get(post.getSourceName());
-                    if (source != null && href.startsWith(source.getWordpressRemoteBaseUrl())) {
-                        // internal link
-                        try {
-                            URL url = new URL(href);
-                            if (url.getFile() == null || url.getFile().equals(url.getPath())) {
-                                // link to the post
-                                String postName = URLDecoder.decode(url.getPath(), Charsets.UTF_8.name());
-                                link = "../" + getPostDirectoryName(postName);
-                                if (isNullOrEmpty(text)) {
-                                    text = postName;
-                                }
-                            }
-                        } catch (MalformedURLException | UnsupportedEncodingException e) {
-                            log.error("Could not process the link {}", href, e);
-                        }
+                    Reference reference = adjustReference(new Reference(href, text, null));
+                    if (reference.getResourceTransferRequest() != null) {
+                        post.getResourceTransferRequests().add(reference.getResourceTransferRequest());
                     }
-                    if (isNullOrEmpty(text)) {
-                        text = link;
-                    }
-                    contentBuilder.append(String.format("[%s](%s)", text, link));
+                    contentBuilder.append(
+                            String.format("[%s](%s)",
+                                          Objects.toString(reference.getText(), reference.getResourceLocation()),
+                                          reference.getResourceLocation()
+                            )
+                    );
                 }
                 break;
             case "img":
-                //TODO: img, deliver file
-                //TODO: internal or external
                 String src = element.attr("src");
                 String alt = element.attr("alt");
-                contentBuilder.append(String.format("![%s](%s)", nullToEmpty(alt), src));
+                Reference reference = adjustReference(new Reference(src, alt, null));
+                if (reference.getResourceTransferRequest() != null) {
+                    post.getResourceTransferRequests().add(reference.getResourceTransferRequest());
+                }
+                contentBuilder.append(
+                        String.format("![%s](%s)",
+                                      nullToEmpty(reference.getText()),
+                                      reference.getResourceLocation()
+                        )
+                );
                 break;
             case "pre":
                 contentBuilder.append("\n```\n")
@@ -140,6 +144,42 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
                 element.childNodes().forEach(node -> processContentNode(node, contentBuilder, post));
                 break;
         }
+    }
+
+    private Reference adjustReference(Reference reference) {
+        return sourcesSettings.getSources()
+                              .values()
+                              .stream()
+                              .filter(source -> reference.getResourceLocation()
+                                                         .startsWith(source.getWordpressRemoteBaseUrl())
+                              )
+                              .findAny()
+                              .map(source -> adjustInternalReference(reference, source))
+                              .orElse(reference);
+    }
+
+    private Reference adjustInternalReference(Reference reference, SourcesSettings.Source source) {
+        try {
+            URL url = new URL(reference.getResourceLocation());
+            if (url.getPath() != null &&
+                (url.getPath().endsWith("/") || !url.getPath().contains(WORDPRESS_CONTENT_PATH))) {
+                // link to the post
+                String postName = URLDecoder.decode(url.getPath(), Charsets.UTF_8.name());
+                return new Reference(
+                        "../" + getPostDirectoryName(postName, source),
+                        Objects.toString(reference.getText(), postName),
+                        null
+                );
+            } else {
+                // link to the file
+                return resourceTransferRequest(reference.getResourceLocation(), source)
+                        .map(req -> new Reference(req.getLocalFilename(), reference.getText(), req))
+                        .orElse(reference);
+            }
+        } catch (MalformedURLException | UnsupportedEncodingException e) {
+            log.error("Could not adjust the link {}", reference.getResourceLocation(), e);
+        }
+        return reference;
     }
 
     private void addCoverFile(Post post) {
@@ -169,25 +209,92 @@ public class PostItemProcessor implements ItemProcessor<Post, Post> {
         return Optional.empty();
     }
 
-    private Optional<ResourceTransferRequest> resourceTransferRequest(String filename, SourcesSettings.Source source) {
-        Path localWordpressPath = source.getWordpressHome().resolve(filename);
-        if (Files.exists(localWordpressPath)) {
-            return Optional.of(
-                    new ResourceTransferRequest(localWordpressPath.toUri(), localWordpressPath.getFileName().toString())
-            );
-        } else if (!isNullOrEmpty(source.getWordpressRemoteBaseUrl())) {
-            return Optional.of(
-                    new ResourceTransferRequest(
-                            URI.create(source.getWordpressRemoteBaseUrl()).resolve(WORDPRESS_CONTENT_PATH + filename),
-                            localWordpressPath.getFileName().toString()
-                    )
-            );
-        } else {
-            return Optional.empty();
-        }
+    private Optional<ResourceTransferRequest> resourceTransferRequest(String resourceLocation,
+                                                                      SourcesSettings.Source postSource) {
+        return ImmutableList.<SourcesSettings.Source>builder()
+                .addAll(
+                        sourcesSettings.getSources().values()
+                )
+                .add(postSource)
+                .build()
+                .stream()
+                .filter(source ->
+                                resourceLocation.startsWith(source.getWordpressRemoteBaseUrl()) ||
+                                source.equals(postSource)
+                )
+                .findFirst()
+                .flatMap(source -> resourceTransferRequestFromSource(resourceLocation, source));
     }
 
-    private String getPostDirectoryName(String title) {
+    private Optional<ResourceTransferRequest> resourceTransferRequestFromSource(String resourceLocation,
+                                                                                SourcesSettings.Source resourceSource) {
+        URI resourceURI = URI.create(resourceLocation);
+        String resourcePath = resourceURI.getPath();
+        if (isNullOrEmpty(resourcePath)) {
+            return Optional.empty();
+        }
+
+        return Utils.orElseOptional(
+                Optional.ofNullable(resourceSource)
+                        .map(SourcesSettings.Source::getWordpressHome)
+                        .flatMap(wordpressHome ->
+                                         checkPathsExistence(
+                                                 getPathFromAlternativeLocation(resourcePath, resourceSource),
+                                                 getPathFromAlternativeLocation(WORDPRESS_CONTENT_PATH + resourcePath,
+                                                                                resourceSource)
+                                         )
+                        )
+                        .map(path ->
+                                     new ResourceTransferRequest(
+                                             path.toUri(),
+                                             adjustFilename(path.getFileName().toString(), resourceSource)
+                                     )
+                        ),
+                Optional.ofNullable(resourceSource)
+                        .map(SourcesSettings.Source::getWordpressRemoteBaseUrl)
+                        .map(Strings::nullToEmpty)
+                        .filter(resourceLocation::startsWith)
+                        .map(baseUrl ->
+                                     new ResourceTransferRequest(
+                                             resourceURI,
+                                             adjustFilename(Paths.get(resourcePath).getFileName().toString(),
+                                                            resourceSource)
+                                     )
+                        )
+        );
+    }
+
+    private Path getPathFromAlternativeLocation(String alternativeLocation, SourcesSettings.Source resourceSource) {
+        // replace multi-slash with one
+        String location = alternativeLocation.replaceAll("/{2,}", "/");
+        String[] subPaths = location.split("/");
+        Path path = resourceSource.getWordpressHome(); //TODO: optional `WordpressHome`
+        int subPathsIndex = 0;
+        while (subPathsIndex < subPaths.length) {
+            path = path.resolve(subPaths[subPathsIndex++]);
+        }
+        return path;
+    }
+
+    private Optional<Path> checkPathsExistence(Path... paths) {
+        return Stream.of(paths)
+                     .filter(Files::exists)
+                     .findFirst();
+    }
+
+    private String adjustFilename(String filename, SourcesSettings.Source source) {
+        int dotIndex = filename.lastIndexOf('.');
+        if (dotIndex > -1 && !isNullOrEmpty(source.getTargetResourceSuffix())) {
+            return filename.substring(0, dotIndex) + source.getTargetResourceSuffix() +
+                   filename.substring(dotIndex);
+        }
+        return filename;
+    }
+
+    private String getPostDirectoryName(String title, SourcesSettings.Source source) {
+        if (source != null) {
+            title += nullToEmpty(source.getTargetResourceSuffix());
+        }
         String output = Junidecode.unidecode(title.trim());
         output = CharMatcher.whitespace().replaceFrom(output, '-');
         output = CharMatcher.forPredicate(Character::isLetter)

@@ -22,6 +22,7 @@ public class SourcesSettings {
     public static class Source {
         private Path wordpressHome;
         private String wordpressRemoteBaseUrl;
+        private String targetResourceSuffix;
         private DataSourceProperties database = new DataSourceProperties();
         private List<String> tags = new ArrayList<>();
         private List<String> categories = new ArrayList<>();
