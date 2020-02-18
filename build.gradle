@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '2.2.1.RELEASE'
     id 'java'
+    id 'application'
     id "io.freefair.lombok" version "4.1.6"
 }
 
@@ -31,3 +32,5 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.batch:spring-batch-test'
 }
+
+mainClassName = 'org.nantipov.utils.wordhugopress.WordHugoPressApplication'
