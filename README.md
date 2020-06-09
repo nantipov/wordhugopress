@@ -1,8 +1,11 @@
 # WordHugoPress
 Small utility for converting [Wordpress](https://wordpress.org/) blog from database into [Hugo](https://gohugo.io/) site.
-See [the Story behind](https://nantipov.org/2019/12/converting-site-from-wordpress-into-hugo/).
+See [the story behind](https://nantipov.org/2019/12/converting-site-from-wordpress-into-hugo/).
 
 # Configuration
+
+For now, the configuration is a part of regular Spring `application.yaml` (_src/src/main/resources/application.yaml_) file. Later there will be an opportunity to externalize all relevant settings (#7).
+
 ```yaml
 app:
   sources:
@@ -52,7 +55,7 @@ All fields from original `Wordpress` posts are propagated into `post` object. Wi
 * `thumbnailFilename` - path to the thumbnail file;
 * `taxonomy` - taxonomy data as map <taxonomy name> -> <list> (e.g. `post_tag` -> `['hey', 'happy']`).
 
-### Output `hugo` structure
+### Output 'hugo' structure
 
 Just create an empty `hugo` site.
 
