@@ -25,44 +25,19 @@ import javax.sql.DataSource;
 @Configuration
 public class ConvertPostsReaderConfig {
 
-    private static final String SQL_QUERY_POSTS =
-            "SELECT\n" +
-            "    p.post_date, p.ID, p.post_modified, p.post_title, p.post_content, p.post_status,\n" +
-            "    u.display_name user_displayname,\n" +
-            "    tax.taxonomy, tax.term_value,\n" +
-            "    thumbnail.thumbnail_data\n" +
-            "FROM\n" +
-            "    wp_posts p\n" +
-            "    JOIN wp_users u ON (u.ID = p.post_author)\n" +
-            "    LEFT JOIN (\n" +
-            "        SELECT termtax.taxonomy, term.name term_value, tr.object_id post_id\n" +
-            "        FROM wp_term_relationships tr, wp_term_taxonomy termtax, wp_terms term\n" +
-            "        WHERE\n" +
-            "                termtax.term_taxonomy_id = tr.term_taxonomy_id\n" +
-            "                AND term.term_id = termtax.term_id\n" +
-            "        ) tax ON (tax.post_id = p.ID)\n" +
-            "    LEFT JOIN (\n" +
-            "        SELECT pm2.meta_value as thumbnail_data, pm1.post_id\n" +
-            "        FROM wp_postmeta pm1, wp_postmeta pm2\n" +
-            "        WHERE\n" +
-            "                pm1.meta_key = '_thumbnail_id'\n" +
-            "                AND pm2.post_id = pm1.meta_value\n" +
-            "                AND pm2.meta_key = '_wp_attachment_metadata'\n" +
-            "        ) thumbnail ON (thumbnail.post_id = p.ID)\n" +
-            "\n" +
-            "WHERE\n" +
-            "    p.post_type = 'post'\n" +
-            "ORDER BY p.ID";
-
     private static final Set<String> DRAFT_STATUSES = ImmutableSet.of("draft", "auto-draft");
 
     static final String BEAN_NAME = "postsReader";
 
     private final SourcesSettings sourcesSettings;
-
+    
     public ConvertPostsReaderConfig(SourcesSettings sourcesSettings) {
         this.sourcesSettings = sourcesSettings;
     }
+    
+    private static String TABLE_PREFIX;
+
+    private static String SQL_QUERY_POSTS; 
 
     @Bean(BEAN_NAME)
     public ItemReader<Post> reader() {
@@ -76,6 +51,39 @@ public class ConvertPostsReaderConfig {
     }
 
     private ItemReader<Post> reader(String sourceName, SourcesSettings.Source source) {
+        if (source.getTags() != null && !source.getTags().isEmpty())
+            TABLE_PREFIX = source.getWordpressTablePrefix();
+        else
+            TABLE_PREFIX = "wp";
+        
+        SQL_QUERY_POSTS = "SELECT\n" +
+            "    p.post_date, p.ID, p.post_modified, p.post_title, p.post_content, p.post_status,\n" +
+            "    u.display_name user_displayname,\n" +
+            "    tax.taxonomy, tax.term_value,\n" +
+            "    thumbnail.thumbnail_data\n" +
+            "FROM\n" +
+            "    " + TABLE_PREFIX + "_posts p\n" +
+            "    JOIN " + TABLE_PREFIX + "_users u ON (u.ID = p.post_author)\n" +
+            "    LEFT JOIN (\n" +
+            "        SELECT termtax.taxonomy, term.name term_value, tr.object_id post_id\n" +
+            "        FROM " + TABLE_PREFIX + "_term_relationships tr, " + TABLE_PREFIX + "_term_taxonomy termtax, " + TABLE_PREFIX + "_terms term\n" +
+            "        WHERE\n" +
+            "                termtax.term_taxonomy_id = tr.term_taxonomy_id\n" +
+            "                AND term.term_id = termtax.term_id\n" +
+            "        ) tax ON (tax.post_id = p.ID)\n" +
+            "    LEFT JOIN (\n" +
+            "        SELECT pm2.meta_value as thumbnail_data, pm1.post_id\n" +
+            "        FROM " + TABLE_PREFIX + "_postmeta pm1, " + TABLE_PREFIX + "_postmeta pm2\n" +
+            "        WHERE\n" +
+            "                pm1.meta_key = '_thumbnail_id'\n" +
+            "                AND pm2.post_id = pm1.meta_value\n" +
+            "                AND pm2.meta_key = '_wp_attachment_metadata'\n" +
+            "        ) thumbnail ON (thumbnail.post_id = p.ID)\n" +
+            "\n" +
+            "WHERE\n" +
+            "    p.post_type = 'post'\n" +
+            "ORDER BY p.ID";
+        
         return new PartitionItemReader<>(
                 new JdbcCursorItemReaderBuilder<Post>()
                         .name("readerDatabase" + sourceName)
