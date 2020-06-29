@@ -12,6 +12,7 @@ app:
     source-1:
       wordpress-home: /optional/path/to/public_html1
       wordpress-remote-base-url: http://optional.website1.org/
+      wordpress-table-prefix: some-table-prefix
       database:
         url: jdbc:mysql://localhost:3306/database1
         username: root
@@ -45,6 +46,11 @@ Also setting `wordpress-remote-base-url` helps for detecting inner-site or exter
 ### Tags, categories and other taxomonies
 
 Special `tags` or `categories` could be assigned for specific sources. And, of course, original tokens will also be migrated.
+
+### Wordpress Table Prefix
+
+Some of user maybe use table `prefix` for wordpress instalation, you need to supply `prefix` in configuration based on your wordpress table. The default value for prefix is `wp_`.
+Reference: https://codex.wordpress.org/Creating_Tables_with_Plugins#Database_Table_Prefix
 
 ### Typical content page layout
 
