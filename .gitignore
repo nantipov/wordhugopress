@@ -33,3 +33,10 @@ hs_err_pid*
 
 lombok.config
 
+# additional config file
+bin/*
+bin/main/application.yaml
+src/main/resources/application.yaml
+.project
+.classpath
+.settings/org.eclipse.buildship.core.prefs
