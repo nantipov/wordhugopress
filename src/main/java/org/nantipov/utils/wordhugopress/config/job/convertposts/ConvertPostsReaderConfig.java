@@ -30,7 +30,7 @@ public class ConvertPostsReaderConfig {
     static final String BEAN_NAME = "postsReader";
 
     private final SourcesSettings sourcesSettings;
-     
+
     public ConvertPostsReaderConfig(SourcesSettings sourcesSettings) {
         this.sourcesSettings = sourcesSettings;
     }
@@ -46,7 +46,7 @@ public class ConvertPostsReaderConfig {
         );
     }
 
-    private ItemReader<Post> reader(String sourceName, SourcesSettings.Source source) {        
+    private ItemReader<Post> reader(String sourceName, SourcesSettings.Source source) {
         return new PartitionItemReader<>(
                 new JdbcCursorItemReaderBuilder<Post>()
                         .name("readerDatabase" + sourceName)
@@ -75,37 +75,38 @@ public class ConvertPostsReaderConfig {
                 -1
         );
     }
-    
-    private String getSQLQueryPosts(String tablePrefix){
-    return "SELECT\n" +
-        "    p.post_date, p.ID, p.post_modified, p.post_title, p.post_content, p.post_status,\n" +
-        "    u.display_name user_displayname,\n" +
-        "    tax.taxonomy, tax.term_value,\n" +
-        "    thumbnail.thumbnail_data\n" +
-        "FROM\n" +
-        "    " + tablePrefix + "_posts p\n" +
-        "    JOIN " + tablePrefix + "_users u ON (u.ID = p.post_author)\n" +
-        "    LEFT JOIN (\n" +
-        "        SELECT termtax.taxonomy, term.name term_value, tr.object_id post_id\n" +
-        "        FROM " + tablePrefix + "_term_relationships tr, " + tablePrefix + "_term_taxonomy termtax, " + tablePrefix + "_terms term\n" +
-        "        WHERE\n" +
-        "                termtax.term_taxonomy_id = tr.term_taxonomy_id\n" +
-        "                AND term.term_id = termtax.term_id\n" +
-        "        ) tax ON (tax.post_id = p.ID)\n" +
-        "    LEFT JOIN (\n" +
-        "        SELECT pm2.meta_value as thumbnail_data, pm1.post_id\n" +
-        "        FROM " + tablePrefix + "_postmeta pm1, " + tablePrefix + "_postmeta pm2\n" +
-        "        WHERE\n" +
-        "                pm1.meta_key = '_thumbnail_id'\n" +
-        "                AND pm2.post_id = pm1.meta_value\n" +
-        "                AND pm2.meta_key = '_wp_attachment_metadata'\n" +
-        "        ) thumbnail ON (thumbnail.post_id = p.ID)\n" +
-        "\n" +
-        "WHERE\n" +
-        "    p.post_type = 'post'\n" +
-        "ORDER BY p.ID";
+
+    private String getSQLQueryPosts(String tablePrefix) {
+        return "SELECT\n" +
+               "    p.post_date, p.ID, p.post_modified, p.post_title, p.post_content, p.post_status,\n" +
+               "    u.display_name user_displayname,\n" +
+               "    tax.taxonomy, tax.term_value,\n" +
+               "    thumbnail.thumbnail_data\n" +
+               "FROM\n" +
+               "    " + tablePrefix + "_posts p\n" +
+               "    JOIN " + tablePrefix + "_users u ON (u.ID = p.post_author)\n" +
+               "    LEFT JOIN (\n" +
+               "        SELECT termtax.taxonomy, term.name term_value, tr.object_id post_id\n" +
+               "        FROM " + tablePrefix + "_term_relationships tr, " + tablePrefix + "_term_taxonomy termtax, " +
+               tablePrefix + "_terms term\n" +
+               "        WHERE\n" +
+               "                termtax.term_taxonomy_id = tr.term_taxonomy_id\n" +
+               "                AND term.term_id = termtax.term_id\n" +
+               "        ) tax ON (tax.post_id = p.ID)\n" +
+               "    LEFT JOIN (\n" +
+               "        SELECT pm2.meta_value as thumbnail_data, pm1.post_id\n" +
+               "        FROM " + tablePrefix + "_postmeta pm1, " + tablePrefix + "_postmeta pm2\n" +
+               "        WHERE\n" +
+               "                pm1.meta_key = '_thumbnail_id'\n" +
+               "                AND pm2.post_id = pm1.meta_value\n" +
+               "                AND pm2.meta_key = '_wp_attachment_metadata'\n" +
+               "        ) thumbnail ON (thumbnail.post_id = p.ID)\n" +
+               "\n" +
+               "WHERE\n" +
+               "    p.post_type = 'post'\n" +
+               "ORDER BY p.ID";
     }
-    
+
     private DataSource dataSource(DataSourceProperties properties) {
         return properties.initializeDataSourceBuilder()
                          .driverClassName("com.mysql.cj.jdbc.Driver")
