@@ -30,10 +30,7 @@ public class ConvertPostsReaderConfig {
     static final String BEAN_NAME = "postsReader";
 
     private final SourcesSettings sourcesSettings;
- 
-    static String SQLQueryPost;
-    static String TablePrefix;
-    
+     
     public ConvertPostsReaderConfig(SourcesSettings sourcesSettings) {
         this.sourcesSettings = sourcesSettings;
     }
@@ -49,17 +46,12 @@ public class ConvertPostsReaderConfig {
         );
     }
 
-    private ItemReader<Post> reader(String sourceName, SourcesSettings.Source source) {
-        if (source.getWordpressTablePrefix() != null && !source.getWordpressTablePrefix().isEmpty() ){
-            TablePrefix = source.getWordpressTablePrefix();
-            SQLQueryPost = getSQLQueryPost(TablePrefix);
-        }
-        
+    private ItemReader<Post> reader(String sourceName, SourcesSettings.Source source) {        
         return new PartitionItemReader<>(
                 new JdbcCursorItemReaderBuilder<Post>()
                         .name("readerDatabase" + sourceName)
                         .dataSource(dataSource(source.getDatabase()))
-                        .sql(SQLQueryPost)
+                        .sql(getSQLQueryPosts(source.getWordpressTablePrefix()))
                         .rowMapper((rs, rowNum) -> post(rs, sourceName))
                         .build(),
                 (p1, p2) -> p2.getId() == p1.getId(),
@@ -84,26 +76,25 @@ public class ConvertPostsReaderConfig {
         );
     }
     
-    private String getSQLQueryPost(String TablePrefix){
-    
-    SQLQueryPost = "SELECT\n" +
+    private String getSQLQueryPosts(String tablePrefix){
+    return "SELECT\n" +
         "    p.post_date, p.ID, p.post_modified, p.post_title, p.post_content, p.post_status,\n" +
         "    u.display_name user_displayname,\n" +
         "    tax.taxonomy, tax.term_value,\n" +
         "    thumbnail.thumbnail_data\n" +
         "FROM\n" +
-        "    " + TablePrefix + "_posts p\n" +
-        "    JOIN " + TablePrefix + "_users u ON (u.ID = p.post_author)\n" +
+        "    " + tablePrefix + "_posts p\n" +
+        "    JOIN " + tablePrefix + "_users u ON (u.ID = p.post_author)\n" +
         "    LEFT JOIN (\n" +
         "        SELECT termtax.taxonomy, term.name term_value, tr.object_id post_id\n" +
-        "        FROM " + TablePrefix + "_term_relationships tr, " + TablePrefix + "_term_taxonomy termtax, " + TablePrefix + "_terms term\n" +
+        "        FROM " + tablePrefix + "_term_relationships tr, " + tablePrefix + "_term_taxonomy termtax, " + tablePrefix + "_terms term\n" +
         "        WHERE\n" +
         "                termtax.term_taxonomy_id = tr.term_taxonomy_id\n" +
         "                AND term.term_id = termtax.term_id\n" +
         "        ) tax ON (tax.post_id = p.ID)\n" +
         "    LEFT JOIN (\n" +
         "        SELECT pm2.meta_value as thumbnail_data, pm1.post_id\n" +
-        "        FROM " + TablePrefix + "_postmeta pm1, " + TablePrefix + "_postmeta pm2\n" +
+        "        FROM " + tablePrefix + "_postmeta pm1, " + tablePrefix + "_postmeta pm2\n" +
         "        WHERE\n" +
         "                pm1.meta_key = '_thumbnail_id'\n" +
         "                AND pm2.post_id = pm1.meta_value\n" +
@@ -113,7 +104,6 @@ public class ConvertPostsReaderConfig {
         "WHERE\n" +
         "    p.post_type = 'post'\n" +
         "ORDER BY p.ID";
-        return SQLQueryPost;
     }
     
     private DataSource dataSource(DataSourceProperties properties) {
