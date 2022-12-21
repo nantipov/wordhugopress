@@ -81,3 +81,7 @@ target:
 ```sh
 ./gradlew clean build run
 ```
+  
+## Troubleshooting
+
+If you experience `General error during semantic analysis: Unsupported class file major version 63` consider downgrading Java. (Version 11 works)
