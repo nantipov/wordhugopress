@@ -4,19 +4,20 @@ spring:
     username: sa
     password: sa
   batch:
-    initialize-schema: always
     job:
-      names: convertPostsJob
+      name: convertPostsJob
+    jdbc:
+      initialize-schema: always
   freemarker:
     enabled: true
 
 app:
   sources:
     regular:
-      wordpress-home: /Users/nantipov/Downloads/backup-2.6.2019_16-51-23_orangelv/homedir/public_html
-      wordpress-remote-base-url: http://orangelvira.com/
+      wordpress-home: /path/to/wordpress/files/public_html
+      wordpress-remote-base-url: http://wordpress-blog.com/
       database:
-        url: jdbc:mysql://localhost:3306/orangelv_wp1
+        url: jdbc:mysql://localhost:3306/wordpressdb_wp1
         username: root
         password: mysql
       tags:
@@ -24,11 +25,11 @@ app:
       categories:
         - 'Basic posts'
     shop:
-      wordpress-home: /Users/nantipov/Downloads/backup-2.6.2019_16-51-23_orangelv/homedir/shop/public_html
-      wordpress-remote-base-url: http://shop.orangelvira.com/
+      wordpress-home: /path/to/another_wordpress/files/public_html
+      wordpress-remote-base-url: http://anotherwordpress.com/
       target-resource-suffix: "-s"
       database:
-        url: jdbc:mysql://localhost:3306/orangelv_wp2_shop
+        url: jdbc:mysql://localhost:3306/wordpressdb_wp2
         username: root
         password: mysql
       tags:

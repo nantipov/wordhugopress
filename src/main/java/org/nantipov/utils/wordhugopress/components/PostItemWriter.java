@@ -7,6 +7,7 @@ import freemarker.template.TemplateException;
 import lombok.extern.slf4j.Slf4j;
 import org.nantipov.utils.wordhugopress.domain.Post;
 import org.nantipov.utils.wordhugopress.domain.ResourceTransferRequest;
+import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -34,8 +34,8 @@ public class PostItemWriter implements ItemWriter<Post> {
     }
 
     @Override
-    public void write(List<? extends Post> items) throws Exception {
-        for (Post post : items) {
+    public void write(Chunk<? extends Post> chunk) throws Exception {
+        for (Post post : chunk) {
             writePost(post);
         }
     }

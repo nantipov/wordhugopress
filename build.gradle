@@ -1,15 +1,19 @@
 plugins {
-    id 'org.springframework.boot' version '2.3.1.RELEASE'
     id 'java'
     id 'application'
-    id "io.freefair.lombok" version "5.1.0"
+    id "io.freefair.lombok" version "8.0.1"
+    id 'org.springframework.boot' version '3.1.0'
+    id 'io.spring.dependency-management' version '1.1.0'
 }
-
-apply plugin: 'io.spring.dependency-management'
 
 group = 'org.nantipov.utils'
 version = '1.0'
-sourceCompatibility = '1.8'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
 
 repositories {
     mavenCentral()
@@ -21,12 +25,11 @@ dependencies {
 
     implementation 'com.zaxxer:HikariCP'
     implementation 'com.h2database:h2'
-    implementation 'mysql:mysql-connector-java'
+    implementation 'com.mysql:mysql-connector-j'
 
-    implementation 'org.jsoup:jsoup:1.13.1'
-    implementation 'org.freemarker:freemarker:2.3.30'
+    implementation 'org.jsoup:jsoup:1.16.1'
 
-    implementation 'com.google.guava:guava:29.0-jre'
+    implementation 'com.google.guava:guava:32.0.0-jre'
     implementation 'net.gcardone.junidecode:junidecode:0.4.1'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -34,3 +37,8 @@ dependencies {
 }
 
 mainClassName = 'org.nantipov.utils.wordhugopress.WordHugoPressApplication'
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
