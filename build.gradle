@@ -27,7 +27,7 @@ dependencies {
     implementation 'com.h2database:h2'
     implementation 'com.mysql:mysql-connector-j'
 
-    implementation 'org.jsoup:jsoup:1.16.1'
+    implementation 'org.jsoup:jsoup:1.17.2'
 
     implementation 'com.google.guava:guava:33.0.0-jre'
     implementation 'net.gcardone.junidecode:junidecode:0.4.1'
