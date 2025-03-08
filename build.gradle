@@ -30,7 +30,7 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.19.1'
 
     implementation 'com.google.guava:guava:33.0.0-jre'
-    implementation 'net.gcardone.junidecode:junidecode:0.4.1'
+    implementation 'net.gcardone.junidecode:junidecode:0.5.2'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.batch:spring-batch-test'
